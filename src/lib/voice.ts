@@ -1,267 +1,226 @@
 /**
- * Voice Service for AlfaZoo
- * Focused on natural, neural-like expressive speech for children.
+ * Voice Service for AlfaZoo — Versão Final Corrigida
+ *
+ * Correções aplicadas:
+ *  1. Vite usa import.meta.env (não process.env)
+ *  2. Variável deve chamar-se VITE_GEMINI_API_KEY na Vercel
+ *  3. Modelo correto para TTS: gemini-2.5-flash-preview-tts
+ *  4. Gemini devolve PCM16 raw — NÃO usar decodeAudioData diretamente
+ *     É necessário converter PCM16 → Float32 manualmente
  */
 
 import { GoogleGenAI, Modality } from "@google/genai";
 
 interface SpeakOptions {
-  rate?: number;
-  pitch?: number;
-  volume?: number;
   onStart?: () => void;
   onEnd?: () => void;
-  useGemini?: boolean;
 }
 
 class VoiceService {
-  private synth: SpeechSynthesis | null = typeof window !== 'undefined' ? window.speechSynthesis : null;
+  private synth: SpeechSynthesis | null =
+    typeof window !== "undefined" ? window.speechSynthesis : null;
   private voice: SpeechSynthesisVoice | null = null;
-  private isReady: boolean = false;
-  private currentTimeout: any = null;
-  private isProcessing: boolean = false;
-  private ai: any = null;
-  private audioContext: AudioContext | null = null;
+  private ai: GoogleGenAI | null = null;
+  private audioCtx: AudioContext | null = null;
+  private cache = new Map<string, AudioBuffer>();
+  private currentSource: AudioBufferSourceNode | null = null;
+  private quotaExceeded = false;
 
   constructor() {
-    if (this.synth) {
-      this.loadVoices();
-      if (this.synth.onvoiceschanged !== undefined) {
-        this.synth.onvoiceschanged = () => this.loadVoices();
-      }
-      this.warmUp();
-    }
-    
-    // Initialize Gemini AI for high-quality TTS
-    try {
-      const apiKey = process.env.GEMINI_API_KEY;
-      if (apiKey) {
+    // ── 1. Inicializar Gemini ──────────────────────────────
+    // No Vite, variáveis de ambiente têm de começar com VITE_
+    // Na Vercel: adiciona VITE_GEMINI_API_KEY (não GEMINI_API_KEY)
+    const apiKey =
+      (import.meta as any).env?.VITE_GEMINI_API_KEY ??
+      (import.meta as any).env?.GEMINI_API_KEY ??
+      "";
+
+    if (apiKey) {
+      try {
         this.ai = new GoogleGenAI({ apiKey });
+        console.log("✅ Gemini TTS pronto! Voz humana activada.");
+      } catch (e) {
+        console.error("Erro ao iniciar Gemini:", e);
       }
-    } catch (e) {
-      console.error("Failed to initialize Gemini AI:", e);
+    } else {
+      console.warn(
+        "⚠️ VITE_GEMINI_API_KEY não encontrada.\n" +
+        "Na Vercel: Settings → Environment Variables → adiciona VITE_GEMINI_API_KEY"
+      );
+    }
+
+    // ── 2. Carregar vozes do sistema (fallback) ────────────
+    if (this.synth) {
+      this.pickVoice();
+      this.synth.onvoiceschanged = () => this.pickVoice();
     }
   }
 
-  private warmUp() {
-    if (!this.synth) return;
-    const utterance = new SpeechSynthesisUtterance('\u200B');
-    utterance.volume = 0;
-    utterance.rate = 10;
-    this.synth.speak(utterance);
-  }
-
-  private loadVoices() {
-    if (!this.synth) return;
-    const voices = this.synth.getVoices();
+  // ── Escolher a melhor voz portuguesa disponível ──────────
+  private pickVoice() {
+    const voices = this.synth?.getVoices() ?? [];
     const priority = [
-      (v: SpeechSynthesisVoice) => v.lang === 'pt-PT' && /natural|neural|premium|google|microsoft|apple/i.test(v.name) && /female|woman|joana|catarina|francisca/i.test(v.name),
-      (v: SpeechSynthesisVoice) => v.lang === 'pt-PT' && /female|woman|joana|catarina|francisca/i.test(v.name),
-      (v: SpeechSynthesisVoice) => v.lang === 'pt-PT' && /natural|neural|premium|google|microsoft|apple/i.test(v.name),
-      (v: SpeechSynthesisVoice) => v.lang === 'pt-PT',
-      (v: SpeechSynthesisVoice) => v.lang.startsWith('pt') && /female|woman/i.test(v.name),
-      (v: SpeechSynthesisVoice) => v.lang.startsWith('pt'),
+      (v: SpeechSynthesisVoice) => /joana/i.test(v.name),
+      (v: SpeechSynthesisVoice) =>
+        /natural|neural/i.test(v.name) && v.lang.startsWith("pt"),
+      (v: SpeechSynthesisVoice) => v.lang === "pt-PT",
+      (v: SpeechSynthesisVoice) => v.lang.startsWith("pt"),
     ];
-
     for (const test of priority) {
       const found = voices.find(test);
-      if (found) {
-        this.voice = found;
-        break;
-      }
+      if (found) { this.voice = found; return; }
     }
-
-    if (!this.voice && voices.length > 0) {
-      this.voice = voices[0];
-    }
-    this.isReady = true;
+    if (voices.length) this.voice = voices[0];
   }
 
-  private cleanText(text: string): string {
-    return text.replace(/[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{1F1E6}-\u{1F1FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{1F900}-\u{1F9FF}\u{1F018}-\u{1F093}\u{1F004}\u{1F400}-\u{1F4FF}\u{1F500}-\u{1F5FF}\u{1F900}-\u{1F9FF}\u{1F300}-\u{1F5FF}]/gu, '');
+  // ── Obter / criar AudioContext ────────────────────────────
+  private getAC(): AudioContext {
+    if (!this.audioCtx) {
+      this.audioCtx = new (
+        window.AudioContext ?? (window as any).webkitAudioContext
+      )();
+    }
+    if (this.audioCtx.state === "suspended") this.audioCtx.resume();
+    return this.audioCtx;
   }
 
-  private naturalizeText(text: string): string {
-    if (text.includes('...') || text.includes('!!!') || text.includes('... ')) {
-      return text;
+  // ── Converter PCM16 base64 → AudioBuffer ─────────────────
+  // CRÍTICO: Gemini devolve PCM16 raw a 24 kHz, 1 canal.
+  // decodeAudioData() NÃO funciona com isso — precisamos converter manualmente.
+  private async pcm16ToBuffer(base64: string): Promise<AudioBuffer> {
+    const binary = atob(base64);
+    const bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) {
+      bytes[i] = binary.charCodeAt(i);
     }
 
-    let natural = text;
-    const interjections = ["Uau!", "Ei!", "Olha só!", "Incrível!", "Espetacular!", "Fixe!", "Boa!"];
-    const randomInterjection = interjections[Math.floor(Math.random() * interjections.length)];
+    // Interpretar como amostras PCM de 16 bits com sinal
+    const pcm16 = new Int16Array(bytes.buffer);
 
-    natural = natural.replace(/^([A-Z]) de /i, (match, letter) => {
-      return `${randomInterjection} ${letter}${letter.toLowerCase()}${letter.toLowerCase()}... ${match}`;
-    });
+    // Converter para Float32 (intervalo -1 a 1)
+    const float32 = new Float32Array(pcm16.length);
+    for (let i = 0; i < pcm16.length; i++) {
+      float32[i] = pcm16[i] / 32768.0;
+    }
 
-    natural = natural.replace(/Muito bem\./g, 'Muito bem! Estás a ir lindamente!');
-    natural = natural.replace(/Incrível\./g, 'Incrííível! Acertaste mesmo! Uau!');
-    natural = natural.replace(/Quase\./g, 'Oooopa... quase! Mas não desistas!');
-    natural = natural.replace(/quase lá/gi, 'quase, quase lá! Estás quase a conseguir!');
-    natural = natural.replace(/Tenta outra vez\./g, 'Vamos tentar outra vez? Eu sei que consegues!');
-    natural = natural.replace(/Olá!/g, 'Olá! Ei, que bom ver-te por aqui!');
-    natural = natural.replace(/Boa tentativa!/g, 'Boa tentativa! Estás a aprender muito bem!');
-
-    return natural;
+    // Criar AudioBuffer a 24000 Hz (taxa do Gemini TTS)
+    const ac = this.getAC();
+    const buffer = ac.createBuffer(1, float32.length, 24000);
+    buffer.getChannelData(0).set(float32);
+    return buffer;
   }
 
-  private currentAudioSource: AudioBufferSourceNode | null = null;
-
-  private async playAudio(base64Data: string) {
-    if (!this.audioContext) {
-      this.audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
-    }
-    
-    if (this.audioContext.state === 'suspended') {
-      await this.audioContext.resume();
-    }
-
-    const binaryString = window.atob(base64Data);
-    const len = binaryString.length;
-    const bytes = new Uint8Array(len);
-    for (let i = 0; i < len; i++) {
-      bytes[i] = binaryString.charCodeAt(i);
-    }
-
-    const audioBuffer = await this.audioContext.decodeAudioData(bytes.buffer);
-    
-    if (!this.isProcessing) return; // Check if cancelled during decode
-
-    const source = this.audioContext.createBufferSource();
-    source.buffer = audioBuffer;
-    source.connect(this.audioContext.destination);
-    this.currentAudioSource = source;
+  // ── Reproduzir AudioBuffer ────────────────────────────────
+  private playBuffer(buffer: AudioBuffer): Promise<void> {
+    const ac = this.getAC();
+    const source = ac.createBufferSource();
+    source.buffer = buffer;
+    source.connect(ac.destination);
+    this.currentSource = source;
     source.start(0);
-    
-    return new Promise<void>((resolve) => {
+    return new Promise((resolve) => {
       source.onended = () => {
-        if (this.currentAudioSource === source) {
-          this.currentAudioSource = null;
-        }
+        if (this.currentSource === source) this.currentSource = null;
         resolve();
       };
     });
   }
 
-  public async speak(text: string, options: SpeakOptions = {}) {
-    // Hard stop any current processing
-    this.cancel();
+  // ── Falar com Gemini TTS ──────────────────────────────────
+  private async speakGemini(text: string): Promise<boolean> {
+    if (!this.ai || this.quotaExceeded) return false;
 
-    const cleanedText = this.cleanText(text);
-    const naturalText = this.naturalizeText(cleanedText);
+    // Cache: não pede ao Gemini duas vezes a mesma frase
+    if (this.cache.has(text)) {
+      await this.playBuffer(this.cache.get(text)!);
+      return true;
+    }
 
-    // Try Gemini TTS for premium quality if enabled and available
-    // We use it for longer sentences to avoid latency on single letters
-    const isLongSentence = naturalText.split(' ').length > 2;
-    if (this.ai && (options.useGemini !== false) && isLongSentence) {
-      try {
-        this.isProcessing = true;
-        if (options.onStart) options.onStart();
-
-        const response = await this.ai.models.generateContent({
-          model: "gemini-2.5-flash-preview-tts",
-          contents: [{ parts: [{ text: `Diz isto com entusiasmo, como uma apresentadora de televisão infantil animada e carinhosa: ${naturalText}` }] }],
-          config: {
-            responseModalities: [Modality.AUDIO],
-            speechConfig: {
-              voiceConfig: {
-                prebuiltVoiceConfig: { voiceName: 'Kore' }, // Kore is usually a good clear female voice
-              },
+    try {
+      const response = await this.ai.models.generateContent({
+        model: "gemini-2.5-flash-preview-tts", // único modelo com TTS
+        contents: [{
+          parts: [{
+            text: `Fala isto como uma professora de jardim de infância muito animada, 
+                   carinhosa e alegre, com pausas naturais entre frases: ${text}`
+          }]
+        }],
+        config: {
+          responseModalities: [Modality.AUDIO],
+          speechConfig: {
+            voiceConfig: {
+              prebuiltVoiceConfig: { voiceName: "Kore" }, // Kore = voz feminina calorosa
             },
           },
-        });
+        },
+      });
 
-        const base64Audio = response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
-        if (base64Audio && this.isProcessing) {
-          await this.playAudio(base64Audio);
-          if (options.onEnd) options.onEnd();
-          this.isProcessing = false;
-          return;
-        }
-      } catch (e) {
-        console.error("Gemini TTS failed, falling back to local:", e);
+      const base64 =
+        response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
+
+      if (!base64) return false;
+
+      const buffer = await this.pcm16ToBuffer(base64);
+      this.cache.set(text, buffer); // guardar em cache
+      await this.playBuffer(buffer);
+      return true;
+
+    } catch (err: any) {
+      const msg = String(err?.message ?? err);
+      if (msg.includes("429") || msg.includes("RESOURCE_EXHAUSTED")) {
+        this.quotaExceeded = true;
+        console.warn("Quota Gemini atingida — a usar voz do sistema.");
+      } else {
+        console.warn("Gemini TTS falhou:", msg);
       }
+      return false;
     }
+  }
 
-    // Fallback to local SpeechSynthesis
+  // ── Fallback: voz do sistema com chunking natural ─────────
+  private speakSystem(text: string, opts: SpeakOptions = {}) {
     if (!this.synth) return;
+    this.synth.cancel();
 
-    if (!this.voice) {
-      this.loadVoices();
-      if (!this.voice) {
-        this.currentTimeout = setTimeout(() => this.speak(text, options), 100);
-        return;
-      }
-    }
+    // Dividir em frases para pausas naturais (180 ms entre frases)
+    const chunks = text.split(/(?<=[.!?])\s+/).filter(Boolean);
+    let i = 0;
 
-    const chunks = naturalText.split(/(?<=[.!?])\s+/);
-    this.currentTimeout = setTimeout(() => {
-      this.isProcessing = true;
-      this.processChunks(chunks, 0, options);
-    }, 50);
+    const sayNext = () => {
+      if (i >= chunks.length) { opts.onEnd?.(); return; }
+      const u = new SpeechSynthesisUtterance(chunks[i]);
+      if (this.voice) u.voice = this.voice;
+      u.lang   = this.voice?.lang ?? "pt-PT";
+      u.rate   = 0.78;  // ritmo calmo e claro
+      u.pitch  = 1.22;  // tom ligeiramente mais agudo (infantil)
+      u.volume = 1;
+      if (i === 0) u.onstart = () => opts.onStart?.();
+      u.onend = () => { i++; setTimeout(sayNext, 180); };
+      u.onerror = () => { opts.onEnd?.(); };
+      this.synth!.speak(u);
+    };
+
+    sayNext();
   }
 
-  private processChunks(chunks: string[], index: number, options: SpeakOptions) {
-    if (!this.isProcessing) return;
+  // ── API pública: speak() ──────────────────────────────────
+  public async speak(text: string, opts: SpeakOptions = {}) {
+    this.cancel();
+    opts.onStart?.();
 
-    if (index >= chunks.length) {
-      this.isProcessing = false;
-      if (options.onEnd) options.onEnd();
-      return;
-    }
-
-    const chunk = chunks[index];
-    if (!chunk.trim()) {
-      this.processChunks(chunks, index + 1, options);
-      return;
-    }
-
-    const utterance = new SpeechSynthesisUtterance(chunk);
-    if (this.voice) {
-      utterance.voice = this.voice;
-      utterance.lang = this.voice.lang;
+    const ok = await this.speakGemini(text);
+    if (ok) {
+      opts.onEnd?.();
     } else {
-      utterance.lang = 'pt-PT';
+      this.speakSystem(text, opts);
     }
-
-    utterance.rate = options.rate || 1.05 + (Math.random() * 0.06 - 0.03); // Slightly faster for fluidity
-    utterance.pitch = options.pitch || 1.35 + (Math.random() * 0.1 - 0.05);
-    utterance.volume = options.volume || 1;
-
-    utterance.onstart = () => {
-      if (index === 0 && options.onStart) options.onStart();
-    };
-
-    utterance.onend = () => {
-      if (!this.isProcessing) return;
-      const pauseTime = chunk.endsWith('...') ? 400 : 100; // Reduced pause for fluidity
-      this.currentTimeout = setTimeout(() => this.processChunks(chunks, index + 1, options), pauseTime);
-    };
-
-    utterance.onerror = (event) => {
-      console.error('SpeechSynthesis Error:', event);
-      this.isProcessing = false;
-      if (options.onEnd) options.onEnd();
-    };
-
-    this.synth!.speak(utterance);
   }
 
+  // ── Parar tudo ────────────────────────────────────────────
   public cancel() {
-    this.isProcessing = false;
-    if (this.currentTimeout) {
-      clearTimeout(this.currentTimeout);
-      this.currentTimeout = null;
-    }
-    if (this.synth) {
-      this.synth.cancel();
-    }
-    if (this.currentAudioSource) {
-      try {
-        this.currentAudioSource.stop();
-      } catch (e) {}
-      this.currentAudioSource = null;
-    }
+    this.synth?.cancel();
+    try { this.currentSource?.stop(); } catch (_) {}
+    this.currentSource = null;
   }
 }
 
