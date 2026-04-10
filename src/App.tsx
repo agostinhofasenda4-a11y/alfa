@@ -64,13 +64,16 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    // Greeting fires on the FIRST user tap (required for browser audio policy).
-    // Without a user gesture, AudioContext stays suspended and no sound plays.
+    // Boas-vindas: apenas uma vez por sessão, no primeiro toque (exigido pelo browser para áudio).
     const greet = () => {
-      speak('Olá! Bem-vindo ao AlfaZoo! Eu sou a tua guia! Escolhe uma actividade para começar!');
+      if (sessionStorage.getItem('az_greeted')) return;
+      sessionStorage.setItem('az_greeted', '1');
+      speak('Olá! Bem-vindo ao AlfaZoo! Escolhe uma actividade para começar!');
     };
-    window.addEventListener('click',      greet, { once: true });
-    window.addEventListener('touchstart', greet, { once: true });
+    if (!sessionStorage.getItem('az_greeted')) {
+      window.addEventListener('click',      greet, { once: true });
+      window.addEventListener('touchstart', greet, { once: true });
+    }
     return () => {
       window.removeEventListener('click',      greet);
       window.removeEventListener('touchstart', greet);
@@ -246,7 +249,7 @@ export default function App() {
                       if (isSpeaking) return;
                       addStars(2);
                       // Flow: Intro -> Count (700ms pause) -> Example phrase
-                      speak(`${item.n}! ... ${item.w}! ... Aqui temos ${item.n} ${item.n === 1 ? 'estrela' : 'estrelas'}!`);
+                      speak(`O número ${item.w}! Conta comigo: ${item.n}! Aqui temos ${item.n} ${item.thing}!`);
                     }}
                   />
                 ))}
