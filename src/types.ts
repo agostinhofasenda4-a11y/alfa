@@ -1,6 +1,7 @@
-export interface AlphaItem { l:string; n:string; e:string; c:string; tip:string; }
-export interface NumberItem { n:number; w:string; e:string; c:string; }
-export interface Mascot     { e:string; name:string; }
+export interface AlphaItem  { l: string; n: string; e: string; c: string; tip: string; }
+export interface NumberItem { n: number; w: string; e: string; c: string; thing: string; }
+export interface Mascot     { e: string; name: string; }
+
 export type ExerciseType = 'word' | 'math' | 'sequence';
 export interface ExerciseItem {
   type: ExerciseType;
@@ -11,4 +12,5 @@ export interface ExerciseItem {
   word?: string;
   missingIndex?: number;
 }
+
 export type Page = 'home' | 'alphabet' | 'numbers' | 'quiz' | 'paint' | 'exercises';
