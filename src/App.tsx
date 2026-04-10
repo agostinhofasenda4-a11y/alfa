@@ -64,18 +64,19 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    // Initial greeting - use a ref to prevent double firing in dev
-    let mounted = true;
-    const timer = setTimeout(() => {
-      if (mounted) {
-        speak('Olá! Bem-vindo ao AlfaZoo! Escolhe uma actividade para começar!');
-      }
-    }, 1000);
-    return () => {
-      mounted = false;
-      clearTimeout(timer);
+    // Greeting fires on the FIRST user tap (required for browser audio policy).
+    // Without a user gesture, AudioContext stays suspended and no sound plays.
+    const greet = () => {
+      speak('Olá! Bem-vindo ao AlfaZoo! Eu sou a tua guia! Escolhe uma actividade para começar!');
     };
-  }, [speak]);
+    window.addEventListener('click',      greet, { once: true });
+    window.addEventListener('touchstart', greet, { once: true });
+    return () => {
+      window.removeEventListener('click',      greet);
+      window.removeEventListener('touchstart', greet);
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handlePageChange = (page: Page) => {
     voiceService.cancel();
