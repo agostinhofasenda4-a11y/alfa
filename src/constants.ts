@@ -29,36 +29,32 @@ export const ALPHA: AlphaItem[] = [
   {l:'Z',n:'Zebra',     e:'🦓', c:'#FF6FA8', tip:'Z de Zebra! As riscas da zebra formam um Z!'},
 ];
 
+// ── NÚMEROS — campo "thing" para narração correcta ───────────────────────────
 export const NUMBERS: NumberItem[] = [
-  {n:1, w:'Um',    e:'⭐',                             c:'#FFD553'},
-  {n:2, w:'Dois',  e:'🌟🌟',                           c:'#FF6FA8'},
-  {n:3, w:'Três',  e:'🍎🍎🍎',                         c:'#4ECDC4'},
-  {n:4, w:'Quatro',e:'🦋🦋🦋🦋',                       c:'#5CDB8F'},
-  {n:5, w:'Cinco', e:'⚽⚽⚽⚽⚽',                       c:'#45B7F5'},
-  {n:6, w:'Seis',  e:'🐟🐟🐟🐟🐟🐟',                   c:'#C9A7FF'},
-  {n:7, w:'Sete',  e:'🌈🌈🌈🌈🌈🌈🌈',                 c:'#FF7B54'},
-  {n:8, w:'Oito',  e:'🐙🐙🐙🐙🐙🐙🐙🐙',               c:'#FF6FA8'},
-  {n:9, w:'Nove',  e:'🐱🐱🐱🐱🐱🐱🐱🐱🐱',             c:'#4ECDC4'},
-  {n:10,w:'Dez',   e:'🎈🎈🎈🎈🎈🎈🎈🎈🎈🎈',           c:'#FFD553'},
+  {n:1, w:'Um',    e:'⭐',                              c:'#FFD553', thing:'estrela'},
+  {n:2, w:'Dois',  e:'🌟🌟',                            c:'#FF6FA8', thing:'estrelas brilhantes'},
+  {n:3, w:'Três',  e:'🍎🍎🍎',                          c:'#4ECDC4', thing:'maçãs'},
+  {n:4, w:'Quatro',e:'🦋🦋🦋🦋',                        c:'#5CDB8F', thing:'borboletas'},
+  {n:5, w:'Cinco', e:'⚽⚽⚽⚽⚽',                        c:'#45B7F5', thing:'bolas'},
+  {n:6, w:'Seis',  e:'🐟🐟🐟🐟🐟🐟',                    c:'#C9A7FF', thing:'peixes'},
+  {n:7, w:'Sete',  e:'🌈🌈🌈🌈🌈🌈🌈',                  c:'#FF7B54', thing:'arco-íris'},
+  {n:8, w:'Oito',  e:'🐙🐙🐙🐙🐙🐙🐙🐙',                c:'#FF6FA8', thing:'polvos'},
+  {n:9, w:'Nove',  e:'🐱🐱🐱🐱🐱🐱🐱🐱🐱',              c:'#4ECDC4', thing:'gatinhos'},
+  {n:10,w:'Dez',   e:'🎈🎈🎈🎈🎈🎈🎈🎈🎈🎈',            c:'#FFD553', thing:'balões'},
 ];
 
 export const MASCOTS: Mascot[] = [
-  {e:'🦁',name:'Leão Leo'},
-  {e:'🦒',name:'Girafa Gigi'},
-  {e:'🐬',name:'Golfinho Gui'},
-  {e:'🦋',name:'Borboleta Bela'},
-  {e:'🐸',name:'Sapo Simão'},
+  {e:'🦁', name:'Leão Leo'},
+  {e:'🦒', name:'Girafa Gigi'},
+  {e:'🐬', name:'Golfinho Gui'},
+  {e:'🦋', name:'Borboleta Bela'},
+  {e:'🐸', name:'Sapo Simão'},
 ];
 
-// ── Sinais matemáticos para aprender ────────────────────────────────────────
+// ── SINAIS MATEMÁTICOS ───────────────────────────────────────────────────────
 export interface MathSign {
-  symbol: string;
-  name: string;
-  emoji: string;
-  color: string;
-  description: string;
-  example: string;
-  tip: string;
+  symbol: string; name: string; emoji: string;
+  color: string; description: string; example: string; tip: string;
 }
 
 export const MATH_SIGNS: MathSign[] = [
@@ -94,15 +90,14 @@ export const MATH_SIGNS: MathSign[] = [
   },
 ];
 
-// ── Pool de 100 exercícios ────────────────────────────────────────────────────
-const ALL_EXERCISES: ExerciseItem[] = [
-  // SÍLABAS / PALAVRAS (40)
+// ── 100 EXERCÍCIOS ────────────────────────────────────────────────────────────
+const POOL: ExerciseItem[] = [
+  // PALAVRAS (40)
   {type:'word',emoji:'🏠',word:'CASA',     missingIndex:1,answer:'A',options:['A','E','O']},
   {type:'word',emoji:'⚽',word:'BOLA',     missingIndex:1,answer:'O',options:['O','A','U']},
   {type:'word',emoji:'🍎',word:'MACA',     missingIndex:1,answer:'A',options:['A','E','I']},
   {type:'word',emoji:'🍇',word:'UVA',      missingIndex:1,answer:'V',options:['V','B','P']},
   {type:'word',emoji:'🐱',word:'GATO',     missingIndex:1,answer:'A',options:['A','O','E']},
-  {type:'word',emoji:'🐶',word:'CAO',      missingIndex:0,answer:'C',options:['C','G','B']},
   {type:'word',emoji:'☀️',word:'SOL',      missingIndex:1,answer:'O',options:['O','U','A']},
   {type:'word',emoji:'🌙',word:'LUA',      missingIndex:1,answer:'U',options:['U','O','A']},
   {type:'word',emoji:'🐘',word:'ELEFANTE', missingIndex:3,answer:'F',options:['F','V','P']},
@@ -137,23 +132,24 @@ const ALL_EXERCISES: ExerciseItem[] = [
   {type:'word',emoji:'🫐',word:'MIRTILO',  missingIndex:3,answer:'T',options:['T','D','P']},
   {type:'word',emoji:'🥝',word:'KIWI',     missingIndex:2,answer:'W',options:['W','V','U']},
   {type:'word',emoji:'🍑',word:'ABACATE',  missingIndex:3,answer:'C',options:['C','G','T']},
+  {type:'word',emoji:'🐦',word:'PASSARO',  missingIndex:3,answer:'S',options:['S','Z','X']},
 
   // ADIÇÃO (15)
-  {type:'math',emoji:'➕',question:'1 + 1 = _',answer:'2', options:['1','2','3']},
-  {type:'math',emoji:'➕',question:'2 + 1 = _',answer:'3', options:['2','3','4']},
-  {type:'math',emoji:'➕',question:'2 + 2 = _',answer:'4', options:['3','4','5']},
-  {type:'math',emoji:'➕',question:'3 + 2 = _',answer:'5', options:['4','5','6']},
-  {type:'math',emoji:'➕',question:'4 + 2 = _',answer:'6', options:['5','6','7']},
-  {type:'math',emoji:'➕',question:'3 + 4 = _',answer:'7', options:['6','7','8']},
-  {type:'math',emoji:'➕',question:'5 + 3 = _',answer:'8', options:['7','8','9']},
+  {type:'math',emoji:'➕',question:'1 + 1 = _', answer:'2', options:['1','2','3']},
+  {type:'math',emoji:'➕',question:'2 + 1 = _', answer:'3', options:['2','3','4']},
+  {type:'math',emoji:'➕',question:'2 + 2 = _', answer:'4', options:['3','4','5']},
+  {type:'math',emoji:'➕',question:'3 + 2 = _', answer:'5', options:['4','5','6']},
+  {type:'math',emoji:'➕',question:'4 + 2 = _', answer:'6', options:['5','6','7']},
+  {type:'math',emoji:'➕',question:'3 + 4 = _', answer:'7', options:['6','7','8']},
+  {type:'math',emoji:'➕',question:'5 + 3 = _', answer:'8', options:['7','8','9']},
   {type:'math',emoji:'➕',question:'_ + 3 = 6', answer:'3', options:['2','3','4']},
   {type:'math',emoji:'➕',question:'_ + 2 = 5', answer:'3', options:['2','3','4']},
   {type:'math',emoji:'➕',question:'6 + _ = 9', answer:'3', options:['2','3','4']},
-  {type:'math',emoji:'➕',question:'5 + 5 = _',answer:'10',options:['8','9','10']},
-  {type:'math',emoji:'➕',question:'7 + 2 = _',answer:'9', options:['8','9','10']},
-  {type:'math',emoji:'➕',question:'4 + 4 = _',answer:'8', options:['7','8','9']},
+  {type:'math',emoji:'➕',question:'5 + 5 = _', answer:'10',options:['8','9','10']},
+  {type:'math',emoji:'➕',question:'7 + 2 = _', answer:'9', options:['8','9','10']},
+  {type:'math',emoji:'➕',question:'4 + 4 = _', answer:'8', options:['7','8','9']},
   {type:'math',emoji:'➕',question:'_ + 1 = 4', answer:'3', options:['2','3','4']},
-  {type:'math',emoji:'➕',question:'6 + 4 = _',answer:'10',options:['9','10','11']},
+  {type:'math',emoji:'➕',question:'6 + 4 = _', answer:'10',options:['9','10','11']},
 
   // SUBTRAÇÃO (15)
   {type:'math',emoji:'➖',question:'3 - 1 = _', answer:'2', options:['1','2','3']},
@@ -163,14 +159,14 @@ const ALL_EXERCISES: ExerciseItem[] = [
   {type:'math',emoji:'➖',question:'9 - 3 = _', answer:'6', options:['5','6','7']},
   {type:'math',emoji:'➖',question:'10 - 5 = _',answer:'5', options:['4','5','6']},
   {type:'math',emoji:'➖',question:'7 - 2 = _', answer:'5', options:['4','5','6']},
-  {type:'math',emoji:'➖',question:'_ - 2 = 3',  answer:'5', options:['4','5','6']},
-  {type:'math',emoji:'➖',question:'10 - _ = 7', answer:'3', options:['2','3','4']},
-  {type:'math',emoji:'➖',question:'8 - _ = 5',  answer:'3', options:['2','3','4']},
-  {type:'math',emoji:'➖',question:'6 - 1 = _',  answer:'5', options:['4','5','6']},
-  {type:'math',emoji:'➖',question:'9 - 4 = _',  answer:'5', options:['4','5','6']},
-  {type:'math',emoji:'➖',question:'4 - 4 = _',  answer:'0', options:['0','1','2']},
-  {type:'math',emoji:'➖',question:'_ - 3 = 4',  answer:'7', options:['6','7','8']},
-  {type:'math',emoji:'➖',question:'10 - 2 = _', answer:'8', options:['7','8','9']},
+  {type:'math',emoji:'➖',question:'_ - 2 = 3', answer:'5', options:['4','5','6']},
+  {type:'math',emoji:'➖',question:'10 - _ = 7',answer:'3', options:['2','3','4']},
+  {type:'math',emoji:'➖',question:'8 - _ = 5', answer:'3', options:['2','3','4']},
+  {type:'math',emoji:'➖',question:'6 - 1 = _', answer:'5', options:['4','5','6']},
+  {type:'math',emoji:'➖',question:'9 - 4 = _', answer:'5', options:['4','5','6']},
+  {type:'math',emoji:'➖',question:'4 - 4 = _', answer:'0', options:['0','1','2']},
+  {type:'math',emoji:'➖',question:'_ - 3 = 4', answer:'7', options:['6','7','8']},
+  {type:'math',emoji:'➖',question:'10 - 2 = _',answer:'8', options:['7','8','9']},
 
   // MULTIPLICAÇÃO (10)
   {type:'math',emoji:'✖️',question:'2 x 1 = _', answer:'2', options:['1','2','3']},
@@ -185,16 +181,16 @@ const ALL_EXERCISES: ExerciseItem[] = [
   {type:'math',emoji:'✖️',question:'_ x 3 = 9', answer:'3', options:['2','3','4']},
 
   // DIVISÃO (10)
-  {type:'math',emoji:'➗',question:'4 ÷ 2 = _',  answer:'2', options:['1','2','3']},
-  {type:'math',emoji:'➗',question:'6 ÷ 2 = _',  answer:'3', options:['2','3','4']},
-  {type:'math',emoji:'➗',question:'8 ÷ 2 = _',  answer:'4', options:['3','4','5']},
-  {type:'math',emoji:'➗',question:'9 ÷ 3 = _',  answer:'3', options:['2','3','4']},
-  {type:'math',emoji:'➗',question:'10 ÷ 2 = _', answer:'5', options:['4','5','6']},
-  {type:'math',emoji:'➗',question:'6 ÷ 3 = _',  answer:'2', options:['1','2','3']},
-  {type:'math',emoji:'➗',question:'_ ÷ 2 = 3',  answer:'6', options:['4','6','8']},
-  {type:'math',emoji:'➗',question:'8 ÷ 4 = _',  answer:'2', options:['1','2','3']},
-  {type:'math',emoji:'➗',question:'10 ÷ 5 = _', answer:'2', options:['1','2','3']},
-  {type:'math',emoji:'➗',question:'_ ÷ 3 = 2',  answer:'6', options:['4','6','9']},
+  {type:'math',emoji:'➗',question:'4 ÷ 2 = _', answer:'2', options:['1','2','3']},
+  {type:'math',emoji:'➗',question:'6 ÷ 2 = _', answer:'3', options:['2','3','4']},
+  {type:'math',emoji:'➗',question:'8 ÷ 2 = _', answer:'4', options:['3','4','5']},
+  {type:'math',emoji:'➗',question:'9 ÷ 3 = _', answer:'3', options:['2','3','4']},
+  {type:'math',emoji:'➗',question:'10 ÷ 2 = _',answer:'5', options:['4','5','6']},
+  {type:'math',emoji:'➗',question:'6 ÷ 3 = _', answer:'2', options:['1','2','3']},
+  {type:'math',emoji:'➗',question:'_ ÷ 2 = 3', answer:'6', options:['4','6','8']},
+  {type:'math',emoji:'➗',question:'8 ÷ 4 = _', answer:'2', options:['1','2','3']},
+  {type:'math',emoji:'➗',question:'10 ÷ 5 = _',answer:'2', options:['1','2','3']},
+  {type:'math',emoji:'➗',question:'_ ÷ 3 = 2', answer:'6', options:['4','6','9']},
 
   // SEQUÊNCIAS (10)
   {type:'sequence',emoji:'📈',question:'2 - 4 - _',    answer:'6', options:['5','6','8']},
@@ -219,7 +215,7 @@ function shuffle<T>(a: T[]): T[] {
 }
 
 export function getSessionExercises(): ExerciseItem[] {
-  return shuffle(ALL_EXERCISES);
+  return shuffle(POOL);
 }
 
-export const EXERCISES = ALL_EXERCISES;
+export const EXERCISES = POOL;
